@@ -1,0 +1,404 @@
+openapi: 3.0.3
+info:
+  title: Inventory Management API
+  version: 1.0.0
+  description: API for Products, Stock, Sales, Suppliers, Users with JWT auth and RBAC
+servers:
+  - url: http://localhost:4000
+    description: Local server
+tags:
+  - name: Auth
+  - name: Products
+  - name: Stock
+  - name: Sales
+  - name: Suppliers
+  - name: Users
+  - name: Reports
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, staff] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Product:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string }
+        sku: { type: string }
+        unit: { type: string }
+        price: { type: number }
+        image_url: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Stock:
+      type: object
+      properties:
+        id: { type: integer }
+        product_id: { type: integer }
+        quantity: { type: integer }
+        location: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Sale:
+      type: object
+      properties:
+        id: { type: integer }
+        product_id: { type: integer }
+        quantity: { type: integer }
+        sale_price: { type: number }
+        customer_name: { type: string }
+        customer_contact: { type: string }
+        sale_date: { type: string, format: date-time }
+    Supplier:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        address: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [admin, staff] }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '409': { description: Email already in use }
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: JWT token and user info
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      security: [{ bearerAuth: [] }]
+      summary: Current user
+      responses:
+        '200': { description: OK }
+  /api/products:
+    get:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      summary: List products
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Product' } } } } }
+    post:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      summary: Create product
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [name, price]
+              properties:
+                name: { type: string }
+                category: { type: string }
+                description: { type: string }
+                sku: { type: string }
+                unit: { type: string }
+                price: { type: number }
+                image: { type: string, format: binary }
+      responses:
+        '201': { description: Created }
+  /api/products/{id}:
+    get:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Get product by id
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Product' } } } }
+    put:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      summary: Update product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                category: { type: string }
+                description: { type: string }
+                sku: { type: string }
+                unit: { type: string }
+                price: { type: number }
+                image: { type: string, format: binary }
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Products]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Delete product
+      responses:
+        '200': { description: Deleted }
+  /api/stock:
+    get:
+      tags: [Stock]
+      security: [{ bearerAuth: [] }]
+      summary: List stock
+      responses:
+        '200': { description: OK }
+  /api/stock/add:
+    post:
+      tags: [Stock]
+      security: [{ bearerAuth: [] }]
+      summary: Add stock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, quantity]
+              properties:
+                product_id: { type: integer }
+                quantity: { type: integer }
+                location: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/stock/reduce:
+    post:
+      tags: [Stock]
+      security: [{ bearerAuth: [] }]
+      summary: Reduce stock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, quantity]
+              properties:
+                product_id: { type: integer }
+                quantity: { type: integer }
+      responses:
+        '200': { description: Updated }
+  /api/sales:
+    get:
+      tags: [Sales]
+      security: [{ bearerAuth: [] }]
+      summary: List sales
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Sales]
+      security: [{ bearerAuth: [] }]
+      summary: Record sale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, quantity, sale_price]
+              properties:
+                product_id: { type: integer }
+                quantity: { type: integer }
+                sale_price: { type: number }
+                customer_name: { type: string }
+                customer_contact: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/suppliers:
+    get:
+      tags: [Suppliers]
+      security: [{ bearerAuth: [] }]
+      summary: List suppliers
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Suppliers]
+      security: [{ bearerAuth: [] }]
+      summary: Create supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                email: { type: string }
+                address: { type: string }
+      responses:
+        '201': { description: Created }
+  /api/suppliers/{id}:
+    put:
+      tags: [Suppliers]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Update supplier
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Suppliers]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Delete supplier
+      responses:
+        '200': { description: Deleted }
+  /api/users:
+    get:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: List users (admin)
+      responses:
+        '200': { description: OK }
+    post:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: Create user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [admin, staff] }
+      responses:
+        '201': { description: Created }
+  /api/users/{id}:
+    put:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Update user (admin)
+      responses:
+        '200': { description: Updated }
+    delete:
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      summary: Delete user (admin)
+      responses:
+        '200': { description: Deleted }
+  /api/reports/low-stock:
+    get:
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: threshold
+          schema: { type: integer, default: 5 }
+      summary: Low stock alert
+      responses:
+        '200': { description: OK }
+  /api/reports/stock:
+    get:
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Stock report
+      responses:
+        '200': { description: OK }
+  /api/reports/sales:
+    get:
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      summary: Sales report
+      responses:
+        '200': { description: OK }
+  /api/reports/profit-loss:
+    get:
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      summary: Profit and loss
+      responses:
+        '200': { description: OK }
+
